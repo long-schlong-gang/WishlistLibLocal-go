@@ -1,4 +1,4 @@
-package main
+package wishlistlib
 
 import (
 	"encoding/json"
