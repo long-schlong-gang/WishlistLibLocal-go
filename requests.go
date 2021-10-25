@@ -50,6 +50,7 @@ func (ctx *Context) getResponseBody(path, method string, params map[string]strin
 		for k, v := range params {
 			req.URL.Query().Add(k, v)
 		}
+		req.URL.RawQuery = req.URL.Query().Encode()
 	}
 
 	// Execute request
