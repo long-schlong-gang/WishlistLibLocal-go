@@ -25,8 +25,8 @@ func DefaultContext() *Context {
 	}
 }
 
-func (ctx *Context) parseObjectFromServer(path, method string, obj interface{}) error {
-	body, err := ctx.getResponseBody(path, method)
+func (ctx *Context) parseObjectFromServer(path, method string, obj interface{}, params map[string]string) error {
+	body, err := ctx.getResponseBody(path, method, params)
 	if err != nil {
 		return err
 	}
@@ -39,12 +39,20 @@ func (ctx *Context) parseObjectFromServer(path, method string, obj interface{}) 
 	return nil
 }
 
-func (ctx *Context) getResponseBody(path, method string) ([]byte, error) {
-	// Send Request
+func (ctx *Context) getResponseBody(path, method string, params map[string]string) ([]byte, error) {
 	req, err := http.NewRequest(method, ctx.BaseUrl+path, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	// Add parameters
+	if params != nil {
+		for k, v := range params {
+			req.URL.Query().Add(k, v)
+		}
+	}
+
+	// Execute request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err

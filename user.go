@@ -12,7 +12,7 @@ type User struct {
 // Retrieves all the users in the database
 func (ctx *Context) GetAllUsers() ([]User, error) {
 	users := []User{}
-	err := ctx.parseObjectFromServer("/user", "GET", &users)
+	err := ctx.parseObjectFromServer("/user", "GET", &users, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +23,9 @@ func (ctx *Context) GetAllUsers() ([]User, error) {
 // Searches users based on a given search string
 func (ctx *Context) SearchUsers(query string) ([]User, error) {
 	users := []User{}
-	err := ctx.parseObjectFromServer("/user/search?search="+query, "GET", &users)
+	err := ctx.parseObjectFromServer("/user/search", "GET", &users, map[string]string{
+		"search": query,
+	})
 	if err != nil {
 		return nil, err
 	}
