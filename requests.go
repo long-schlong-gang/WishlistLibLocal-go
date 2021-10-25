@@ -2,6 +2,7 @@ package wishlistlib
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 )
@@ -47,15 +48,17 @@ func (ctx *Context) getResponseBody(path, method string, params map[string]strin
 
 	// Add parameters
 	if params != nil {
+		q := req.URL.Query()
 		for k, v := range params {
-			req.URL.Query().Add(k, v)
+			q.Add(k, v)
 		}
-		req.URL.RawQuery = req.URL.Query().Encode()
+		req.URL.RawQuery = q.Encode()
 	}
 
 	// Execute request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		fmt.Println("LIB-ERR:", err)
 		return nil, err
 	}
 
