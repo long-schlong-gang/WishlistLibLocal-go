@@ -2,7 +2,6 @@ package wishlistlib
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 )
@@ -57,7 +56,6 @@ func (ctx *Context) getResponseBody(path, method string, params map[string]strin
 	// Execute request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("LIB-ERR:", err)
 		return nil, err
 	}
 
