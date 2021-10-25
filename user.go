@@ -20,6 +20,17 @@ func (ctx *Context) GetAllUsers() ([]User, error) {
 	return users, nil
 }
 
+// Searches users based on a given search string
+func (ctx *Context) SearchUsers(query string) ([]User, error) {
+	users := []User{}
+	err := ctx.parseObjectFromServer("/user/search?search="+query, "GET", &users)
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 // Converts the user to a string for debugging
 func (u User) String() string {
 	return fmt.Sprintf("[%v] %v (%v)", u.ID, u.Name, u.Email)
