@@ -29,7 +29,7 @@ type Status struct {
 // Retrieves all the items from a user's list
 func (ctx *Context) GetAllItems(user User) ([]Item, error) {
 	items := []Item{}
-	err := ctx.parseObjectFromServer("/user/"+strconv.FormatUint(user.ID, 10)+"/list", "GET", &items, nil)
+	err := ctx.parseObjectFromServer("/user/"+strconv.FormatUint(user.ID, 10)+"/list", "GET", &items, nil, false)
 	if err != nil {
 		return nil, err
 	}

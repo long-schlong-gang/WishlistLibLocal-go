@@ -25,3 +25,15 @@ type InvalidCredentialsError string
 func (e InvalidCredentialsError) Error() string {
 	return fmt.Sprintf("Request failed due to the provided credentials being invalid/incorrect:\n%v\n", string(e))
 }
+
+type NoPasswordProvidedError int
+
+func (e NoPasswordProvidedError) Error() string {
+	return "You can't create an account without any password.\n"
+}
+
+type NoAuthenticatedUserError int
+
+func (e NoAuthenticatedUserError) Error() string {
+	return "This method requires a user to be authenticated with context.SetAuthenticatedUser(user).\n"
+}

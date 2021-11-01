@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"time"
+	"net/url"
+	"strings"
 )
 
 type Token struct {
@@ -13,15 +14,23 @@ type Token struct {
 	TokenType   string `json:"token_type"`
 }
 
+// Sets the user to use for this context
+func (ctx *Context) SetAuthenticatedUser(user User) {
+	ctx.authUser = user
+}
+
 // Gets an access token from the server to be provided for all secured endpoints.
-// `autoRenew` sets whether the token should automatically be renewed once it expires
-func (ctx *Context) Authenticate(email, password string, autoRenew bool) error {
+func (ctx *Context) authenticate() error {
 	// Send Request
-	req, err := http.NewRequest("POST", ctx.BaseUrl+"/token", nil)
+	data := url.Values{}
+	data.Add("grant_type", "client_credentials")
+	req, err := http.NewRequest("POST", ctx.BaseUrl+"/token", strings.NewReader(data.Encode()))
 	if err != nil {
 		return err
 	}
-	req.SetBasicAuth(email, password)
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	req.SetBasicAuth(ctx.authUser.Email, ctx.authUser.password)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
@@ -29,6 +38,11 @@ func (ctx *Context) Authenticate(email, password string, autoRenew bool) error {
 
 	// Read Response
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return handleNonOkErrors(resp.StatusCode, resp.Status)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
@@ -40,21 +54,5 @@ func (ctx *Context) Authenticate(email, password string, autoRenew bool) error {
 		return err
 	}
 
-	if autoRenew {
-		ctx.email = email
-		ctx.password = password
-		go ctx.renewToken()
-	}
-
 	return nil
-}
-
-func (ctx *Context) renewToken() {
-
-	// Wait half of the token expiry time before renewing it
-	time.Sleep(time.Duration(ctx.Token.ExpiresIn * uint64(time.Second)))
-	err := ctx.Authenticate(ctx.email, ctx.password, false)
-	if err == nil {
-		ctx.renewToken()
-	}
 }
