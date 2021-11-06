@@ -19,6 +19,29 @@ func (ctx *Context) SetAuthenticatedUser(user User) {
 	ctx.authUser = user
 }
 
+// Checks if the credentials are valid by making getting a token
+func (ctx *Context) CheckCredentials() error {
+	// Send Request
+	data := url.Values{}
+	data.Add("grant_type", "client_credentials")
+	req, err := http.NewRequest("POST", ctx.BaseUrl+"/token", strings.NewReader(data.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	req.SetBasicAuth(ctx.authUser.Email, ctx.authUser.password)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return InvalidCredentialsError(resp.Status)
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
 // Gets an access token from the server to be provided for all secured endpoints.
 func (ctx *Context) authenticate() error {
 	// Send Request
