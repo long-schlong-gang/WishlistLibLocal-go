@@ -26,6 +26,18 @@ func (e InvalidCredentialsError) Error() string {
 	return fmt.Sprintf("Request failed due to the provided credentials being invalid/incorrect:\n%v\n", string(e))
 }
 
+type NotFoundError string
+
+func (e NotFoundError) Error() string {
+	return fmt.Sprintf("Couldn't find the object requested:\n%v\n", string(e))
+}
+
+type InternalServerError string
+
+func (e InternalServerError) Error() string {
+	return fmt.Sprintf("An error occurred on the server:\n%v\n", string(e))
+}
+
 type NoPasswordProvidedError int
 
 func (e NoPasswordProvidedError) Error() string {

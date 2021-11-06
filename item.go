@@ -6,7 +6,7 @@ import (
 )
 
 type Item struct {
-	ID          uint64 `json:"item_id"`
+	ItemID      uint64 `json:"item_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 	Price       uint64 `json:"price"`
@@ -15,13 +15,13 @@ type Item struct {
 }
 
 type Link struct {
-	ID   uint64 `json:"link_id"`
-	Text string `json:"text"`
-	URL  string `json:"hyperlink"`
+	LinkID uint64 `json:"link_id"`
+	Text   string `json:"text"`
+	URL    string `json:"hyperlink"`
 }
 
 type Status struct {
-	ID          uint64 `json:"status_id"`
+	StatusID    uint64 `json:"status_id"`
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
@@ -37,7 +37,78 @@ func (ctx *Context) GetAllItems(user User) ([]Item, error) {
 	return items, nil
 }
 
+// Retrieves an item with a certain ID
+func (ctx *Context) GetItemByID(id uint64) (Item, error) {
+	item := Item{}
+	err := ctx.parseObjectFromServer("/item/"+strconv.FormatUint(id, 10), "GET", &item, nil, false)
+	if err != nil {
+		return Item{}, err
+	}
+
+	return item, nil
+}
+
+// Adds an item to a user's list and returns the item with all its info
+func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
+	obj := struct {
+		Name        string `json:"name"`
+		Description string `json:"description"`
+		Price       uint64 `json:"price"`
+		Status      struct {
+			StatusID uint64 `json:"status_id"`
+		} `json:"status"`
+		Links []struct {
+			Text      string `json:"text"`
+			Hyperlink string `json:"hyperlink"`
+		} `json:"links"`
+	}{
+		Name:        item.Name,
+		Description: item.Description,
+		Price:       item.Price,
+		Status: struct {
+			StatusID uint64 `json:"status_id"`
+		}{StatusID: item.Status.StatusID},
+		Links: make([]struct {
+			Text      string `json:"text"`
+			Hyperlink string `json:"hyperlink"`
+		}, 0),
+	}
+	for _, l := range item.Links {
+		obj.Links = append(obj.Links, struct {
+			Text      string `json:"text"`
+			Hyperlink string `json:"hyperlink"`
+		}{
+			Text:      l.Text,
+			Hyperlink: l.URL,
+		})
+	}
+	fmt.Println("PREJ:", obj)
+
+	err := ctx.sendObjectToServer("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list", "POST", obj, true)
+	if err != nil {
+		return Item{}, err
+	}
+
+	items, err := ctx.GetAllItems(ctx.authUser)
+	if err != nil {
+		return Item{}, err
+	}
+	lastItem := items[0]
+	for _, i := range items {
+		if i.ItemID > lastItem.ItemID {
+			lastItem = i
+		}
+	}
+
+	return lastItem, nil
+}
+
+// Delete an item from the database (WARNING! PERMANENT!)
+func (ctx *Context) DeleteItem(item Item) error {
+	return ctx.simpleRequest("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list/"+strconv.FormatUint(item.ItemID, 10), "DELETE", true)
+}
+
 // Converts the item to a short string for debugging (Doesn't contain all info)
 func (i Item) String() string {
-	return fmt.Sprintf("[%v](%v) %v - CHF %v", i.ID, i.Status.Name, i.Name, i.Price)
+	return fmt.Sprintf("[%v](%v) %v - CHF %v", i.ItemID, i.Status.Name, i.Name, i.Price)
 }

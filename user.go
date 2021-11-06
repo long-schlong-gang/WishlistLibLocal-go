@@ -97,11 +97,6 @@ func (ctx *Context) ChangeAuthenticatedUser(name, email, password string) error 
 		return NoAuthenticatedUserError(0)
 	}
 
-	err := ctx.authenticate()
-	if err != nil {
-		return err
-	}
-
 	userInfo := make(map[string]string)
 
 	if name != "" {
@@ -120,7 +115,7 @@ func (ctx *Context) ChangeAuthenticatedUser(name, email, password string) error 
 		userPword = password
 	}
 
-	err = ctx.sendObjectToServer("/user/"+strconv.FormatUint(ctx.authUser.ID, 10), "PUT", userInfo, true)
+	err := ctx.sendObjectToServer("/user/"+strconv.FormatUint(ctx.authUser.ID, 10), "PUT", userInfo, true)
 	if err != nil {
 		return err
 	}
@@ -140,12 +135,6 @@ func (ctx *Context) DeleteAuthenticatedUser() error {
 	if ctx.authUser == (User{}) {
 		return NoAuthenticatedUserError(0)
 	}
-
-	err := ctx.authenticate()
-	if err != nil {
-		return err
-	}
-
 	return ctx.simpleRequest("/user/"+strconv.FormatUint(ctx.authUser.ID, 10), "DELETE", true)
 }
 

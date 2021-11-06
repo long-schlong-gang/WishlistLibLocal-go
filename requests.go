@@ -2,7 +2,9 @@ package wishlistlib
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -54,6 +56,11 @@ func (ctx *Context) sendObjectToServer(path, method string, obj interface{}, isA
 	req.Header.Add("Content-Type", "application/json")
 
 	if isAuth {
+		err := ctx.authenticate()
+		if err != nil {
+			return err
+		}
+
 		q := req.URL.Query()
 		q.Add("token", ctx.Token.AccessToken)
 		req.URL.RawQuery = q.Encode()
@@ -80,18 +87,19 @@ func (ctx *Context) getResponseBody(path, method string, params map[string]strin
 	}
 
 	// Add parameters
-	if params != nil {
-		q := req.URL.Query()
-
-		if isAuth {
-			q.Add("token", ctx.Token.AccessToken)
+	q := req.URL.Query()
+	if isAuth {
+		err := ctx.authenticate()
+		if err != nil {
+			return nil, err
 		}
 
-		for k, v := range params {
-			q.Add(k, v)
-		}
-		req.URL.RawQuery = q.Encode()
+		q.Add("token", ctx.Token.AccessToken)
 	}
+	for k, v := range params {
+		q.Add(k, v)
+	}
+	req.URL.RawQuery = q.Encode()
 
 	// Execute request
 	resp, err := http.DefaultClient.Do(req)
@@ -120,12 +128,21 @@ func (ctx *Context) simpleRequest(path, method string, isAuth bool) error {
 	}
 
 	if isAuth {
+		err := ctx.authenticate()
+		if err != nil {
+			return err
+		}
+
 		q := req.URL.Query()
 		q.Add("token", ctx.Token.AccessToken)
 		req.URL.RawQuery = q.Encode()
 	}
 
 	resp, err := http.DefaultClient.Do(req)
+
+	b, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println("STAT:", resp.Status, "\nBODY:", string(b))
+
 	if err != nil {
 		return err
 	}
@@ -142,10 +159,14 @@ func handleNonOkErrors(code int, status string) error {
 	switch code {
 	case 400:
 		return BadRequestError(status)
-	case 409:
-		return EmailExistsError(status)
 	case 401:
 		return InvalidCredentialsError(status)
+	case 404:
+		return NotFoundError(status)
+	case 409:
+		return EmailExistsError(status)
+	case 500:
+		return InternalServerError(status)
 	}
 	return nil
 }
