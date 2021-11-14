@@ -6,12 +6,12 @@ import (
 )
 
 type Item struct {
-	ItemID      uint64 `json:"item_id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Price       uint64 `json:"price"`
-	Status      Status `json:"status"`
-	Links       []Link `json:"links"`
+	ItemID      uint64  `json:"item_id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Price       float32 `json:"price"`
+	Status      Status  `json:"status"`
+	Links       []Link  `json:"links"`
 }
 
 type Link struct {
@@ -34,6 +34,13 @@ func (ctx *Context) GetAllItems(user User) ([]Item, error) {
 		return nil, err
 	}
 
+	// Convert prices
+	if len(items) > 0 {
+		for k, i := range items {
+			items[k].Price = float32(i.Price) / 100
+		}
+	}
+
 	return items, nil
 }
 
@@ -44,6 +51,9 @@ func (ctx *Context) GetItemByID(id uint64) (Item, error) {
 	if err != nil {
 		return Item{}, err
 	}
+
+	// Convert price
+	item.Price = float32(item.Price) / 100
 
 	return item, nil
 }
@@ -64,7 +74,7 @@ func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
 	}{
 		Name:        item.Name,
 		Description: item.Description,
-		Price:       item.Price,
+		Price:       uint64(item.Price * 100), // Converts to integer cents for server
 		Status: struct {
 			StatusID uint64 `json:"status_id"`
 		}{StatusID: item.Status.StatusID},
