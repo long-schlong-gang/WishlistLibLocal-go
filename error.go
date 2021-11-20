@@ -61,3 +61,9 @@ type UnknownHttpError string
 func (e UnknownHttpError) Error() string {
 	return fmt.Sprintf("Some unknown non-ok status was returned by the API:\n%v\n", string(e))
 }
+
+type ForbiddenError string
+
+func (e ForbiddenError) Error() string {
+	return fmt.Sprintf("Tried to read/write something the auth-user doesn't have access to:\n%v\n", string(e))
+}
