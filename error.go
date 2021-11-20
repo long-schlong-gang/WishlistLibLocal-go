@@ -67,3 +67,9 @@ type ForbiddenError string
 func (e ForbiddenError) Error() string {
 	return fmt.Sprintf("Tried to read/write something the auth-user doesn't have access to:\n%v\n", string(e))
 }
+
+type PriceOutOfRangeError uint64
+
+func (e PriceOutOfRangeError) Error() string {
+	return fmt.Sprintf("The price provided was larger than a 32-bit integer. I doubt anyone's going to buy that for you, buddy...: %v\n", e)
+}

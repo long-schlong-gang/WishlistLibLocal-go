@@ -60,10 +60,17 @@ func (ctx *Context) GetItemByID(id uint64) (Item, error) {
 
 // Adds an item to a user's list and returns the item with all its info
 func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
+
+	// Check price is within limits
+	intPrice := uint32(item.Price * 100)
+	if uint64(intPrice) != uint64(item.Price*100) {
+		return Item{}, PriceOutOfRangeError(item.Price * 100)
+	}
+
 	obj := struct {
 		Name        string `json:"name"`
 		Description string `json:"description"`
-		Price       uint64 `json:"price"`
+		Price       uint32 `json:"price"`
 		Status      struct {
 			StatusID uint64 `json:"status_id"`
 		} `json:"status"`
@@ -74,7 +81,7 @@ func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
 	}{
 		Name:        item.Name,
 		Description: item.Description,
-		Price:       uint64(item.Price * 100), // Converts to integer cents for server
+		Price:       intPrice,
 		Status: struct {
 			StatusID uint64 `json:"status_id"`
 		}{StatusID: item.Status.StatusID},
