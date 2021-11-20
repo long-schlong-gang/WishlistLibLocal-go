@@ -38,6 +38,12 @@ func (e InternalServerError) Error() string {
 	return fmt.Sprintf("An error occurred on the server:\n%v\n", string(e))
 }
 
+type AddingItemFailed string
+
+func (e AddingItemFailed) Error() string {
+	return fmt.Sprintf("Failed to add the item given:\n%v\n", string(e))
+}
+
 type NoPasswordProvidedError int
 
 func (e NoPasswordProvidedError) Error() string {
@@ -48,4 +54,10 @@ type NoAuthenticatedUserError int
 
 func (e NoAuthenticatedUserError) Error() string {
 	return "This method requires a user to be authenticated with context.SetAuthenticatedUser(user).\n"
+}
+
+type UnknownHttpError string
+
+func (e UnknownHttpError) Error() string {
+	return fmt.Sprintf("Some unknown non-ok status was returned by the API:\n%v\n", string(e))
 }

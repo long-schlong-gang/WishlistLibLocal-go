@@ -92,7 +92,6 @@ func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
 			Hyperlink: l.URL,
 		})
 	}
-	fmt.Println("PREJ:", obj)
 
 	err := ctx.sendObjectToServer("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list", "POST", obj, true)
 	if err != nil {
@@ -102,6 +101,8 @@ func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
 	items, err := ctx.GetAllItems(ctx.authUser)
 	if err != nil {
 		return Item{}, err
+	} else if len(items) < 1 {
+		return Item{}, AddingItemFailed("No Items were inserted to user's list, but request succeeded")
 	}
 	lastItem := items[0]
 	for _, i := range items {

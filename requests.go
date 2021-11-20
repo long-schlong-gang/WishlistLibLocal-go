@@ -168,5 +168,5 @@ func handleNonOkErrors(code int, status string) error {
 	case 500:
 		return InternalServerError(status)
 	}
-	return nil
+	return UnknownHttpError(status)
 }
