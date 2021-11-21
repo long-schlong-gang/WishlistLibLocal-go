@@ -157,7 +157,7 @@ func handleNonOkErrors(code int, status string) error {
 	case 401:
 		return InvalidCredentialsError(status)
 	case 403:
-		return InvalidCredentialsError(status)
+		return ForbiddenError(status)
 	case 404:
 		return NotFoundError(status)
 	case 409:
