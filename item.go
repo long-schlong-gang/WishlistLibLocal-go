@@ -137,6 +137,11 @@ func (ctx *Context) SetItemStatus(item Item, status Status) error {
 	return ctx.sendObjectToServer("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list/"+strconv.FormatUint(item.ItemID, 10), "PUT", obj, true)
 }
 
+// Reserves an item using the reserve endpoint
+func (ctx *Context) ReserveItem(item Item) error {
+	return ctx.simpleRequest("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list/"+strconv.FormatUint(item.ItemID, 10)+"/reserve", "PUT", true)
+}
+
 // Converts the item to a short string for debugging (Doesn't contain all info)
 func (i Item) String() string {
 	return fmt.Sprintf("[%v](%v) %v - CHF %v", i.ItemID, i.Status.Name, i.Name, i.Price)
