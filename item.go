@@ -6,12 +6,13 @@ import (
 )
 
 type Item struct {
-	ItemID      uint64  `json:"item_id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float32 `json:"price"`
-	Status      Status  `json:"status"`
-	Links       []Link  `json:"links"`
+	ItemID         uint64  `json:"item_id"`
+	Name           string  `json:"name"`
+	Description    string  `json:"description"`
+	Price          float32 `json:"price"`
+	ReservedByUser User    `json:"reserved_by"`
+	Status         Status  `json:"status"`
+	Links          []Link  `json:"links"`
 }
 
 type Link struct {
@@ -68,10 +69,11 @@ func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
 	}
 
 	obj := struct {
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		Price       uint32 `json:"price"`
-		Status      struct {
+		Name           string `json:"name"`
+		Description    string `json:"description"`
+		Price          uint32 `json:"price"`
+		ReservedByUser *User  `json:"reserved_by,omitempty"`
+		Status         struct {
 			StatusID uint64 `json:"status_id"`
 		} `json:"status"`
 		Links []struct {
@@ -79,9 +81,10 @@ func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
 			Hyperlink string `json:"hyperlink"`
 		} `json:"links"`
 	}{
-		Name:        item.Name,
-		Description: item.Description,
-		Price:       intPrice,
+		Name:           item.Name,
+		Description:    item.Description,
+		Price:          intPrice,
+		ReservedByUser: &item.ReservedByUser,
 		Status: struct {
 			StatusID uint64 `json:"status_id"`
 		}{StatusID: item.Status.StatusID},
