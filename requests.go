@@ -2,9 +2,7 @@ package wishlistlib
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -140,9 +138,6 @@ func (ctx *Context) simpleRequest(path, method string, isAuth bool) error {
 
 	resp, err := http.DefaultClient.Do(req)
 
-	b, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("STAT:", resp.Status, "\nBODY:", string(b))
-
 	if err != nil {
 		return err
 	}
@@ -160,6 +155,8 @@ func handleNonOkErrors(code int, status string) error {
 	case 400:
 		return BadRequestError(status)
 	case 401:
+		return InvalidCredentialsError(status)
+	case 403:
 		return InvalidCredentialsError(status)
 	case 404:
 		return NotFoundError(status)
