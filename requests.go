@@ -1,157 +1,84 @@
 package wishlistlib
 
 import (
-	"encoding/json"
-	"io"
+	"bytes"
+	"fmt"
+	"io/ioutil"
 	"net/http"
-	"strings"
 )
 
-const DEFAULT_BASE_URL = "https://www.pearcenet.ch:2512"
+const DEFAULT_PORT = 2512
 
-type Context struct {
-	BaseUrl string
+type WishClient struct {
+	BaseURL string
+	Port    int
 	Token
-	authUser User
 }
 
 // Returns the default context
-func DefaultContext() *Context {
-	return &Context{
-		BaseUrl:  DEFAULT_BASE_URL,
-		Token:    Token{},
-		authUser: User{},
+func DefaultWishClient(baseURL string) *WishClient {
+	return &WishClient{
+		BaseURL: baseURL,
+		Port:    DEFAULT_PORT,
+		Token:   Token{},
 	}
 }
 
-func (ctx *Context) parseObjectFromServer(path, method string, obj interface{}, params map[string]string, isAuth bool) error {
-	body, err := ctx.getResponseBody(path, method, params, isAuth)
+func (c *WishClient) executeRequest(method, path string, params map[string]string, reqBodyData []byte, addAuth bool) ([]byte, error) {
+	// Put body data into a reader
+	reqBody := bytes.NewReader(reqBodyData)
+	req, err := http.NewRequest(method, fmt.Sprint(c.BaseURL, ":", c.Port, path), reqBody)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = json.Unmarshal(body, obj)
-	if err != nil {
-		return err
+	// Add access-token in header
+	if addAuth {
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.Token.Token))
 	}
 
-	return nil
-}
-
-func (ctx *Context) sendObjectToServer(path, method string, obj interface{}, isAuth bool) error {
-
-	// Marshal Object to JSON
-	jsonBytes, err := json.Marshal(obj)
-	if err != nil {
-		return err
-	}
-
-	bodyReader := strings.NewReader(string(jsonBytes))
-	req, err := http.NewRequest(method, ctx.BaseUrl+path, bodyReader)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Content-Type", "application/json")
-
-	if isAuth {
-		err := ctx.authenticate()
-		if err != nil {
-			return err
-		}
-
+	// Add query parameters if present
+	if params != nil {
 		q := req.URL.Query()
-		q.Add("token", ctx.Token.AccessToken)
+		for key, value := range params {
+			q.Add(key, value)
+		}
 		req.URL.RawQuery = q.Encode()
 	}
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
+	// Set request data type if present
+	if reqBodyData != nil {
+		req.Header.Set("Content-Type", "application/json")
 	}
 
-	if resp.StatusCode != http.StatusOK {
-		return handleNonOkErrors(resp.StatusCode, resp.Status)
-	}
-
-	defer resp.Body.Close()
-
-	return nil
-}
-
-func (ctx *Context) getResponseBody(path, method string, params map[string]string, isAuth bool) ([]byte, error) {
-	req, err := http.NewRequest(method, ctx.BaseUrl+path, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	// Add parameters
-	q := req.URL.Query()
-	if isAuth {
-		err := ctx.authenticate()
-		if err != nil {
-			return nil, err
-		}
-
-		q.Add("token", ctx.Token.AccessToken)
-	}
-	for k, v := range params {
-		q.Add(k, v)
-	}
-	req.URL.RawQuery = q.Encode()
-
-	// Execute request
+	// Create HTTP client
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, handleNonOkErrors(resp.StatusCode, resp.Status)
-	}
-
-	// Read Response
 	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
+
+	// Read response body
+	respBody, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	return body, nil
-}
-
-func (ctx *Context) simpleRequest(path, method string, isAuth bool) error {
-	req, err := http.NewRequest(method, ctx.BaseUrl+path, nil)
+	// Check for error responses
+	err = handleNonOkErrors(resp.StatusCode, string(respBody))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if isAuth {
-		err := ctx.authenticate()
-		if err != nil {
-			return err
-		}
-
-		q := req.URL.Query()
-		q.Add("token", ctx.Token.AccessToken)
-		req.URL.RawQuery = q.Encode()
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return handleNonOkErrors(resp.StatusCode, resp.Status)
-	}
-
-	return err
+	return respBody, nil
 }
 
 func handleNonOkErrors(code int, status string) error {
 	switch code {
+	case 200:
+		fallthrough
+	case 204:
+		return nil
 	case 400:
 		return BadRequestError(status)
 	case 401:

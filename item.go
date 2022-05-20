@@ -1,6 +1,7 @@
 package wishlistlib
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 )
@@ -28,9 +29,15 @@ type Status struct {
 }
 
 // Retrieves all the items from a user's list
-func (ctx *Context) GetAllItems(user User) ([]Item, error) {
+func (wc *WishClient) GetAllItemsOfUser(user User) ([]Item, error) {
 	items := []Item{}
-	err := ctx.parseObjectFromServer("/user/"+strconv.FormatUint(user.ID, 10)+"/list", "GET", &items, nil, false)
+	resBody, err := wc.executeRequest("GET", "/user/"+strconv.FormatUint(user.ID, 10)+"/list", nil, nil, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse objects
+	err = json.Unmarshal(resBody, &items)
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +53,15 @@ func (ctx *Context) GetAllItems(user User) ([]Item, error) {
 }
 
 // Retrieves an item with a certain ID
-func (ctx *Context) GetItemByID(id uint64) (Item, error) {
+func (wc *WishClient) GetItemByID(id uint64) (Item, error) {
 	item := Item{}
-	err := ctx.parseObjectFromServer("/item/"+strconv.FormatUint(id, 10), "GET", &item, nil, false)
+	resBody, err := wc.executeRequest("GET", "/item/"+strconv.FormatUint(id, 10), nil, nil, false)
+	if err != nil {
+		return Item{}, err
+	}
+
+	// Parse objects
+	err = json.Unmarshal(resBody, &item)
 	if err != nil {
 		return Item{}, err
 	}
@@ -60,7 +73,7 @@ func (ctx *Context) GetItemByID(id uint64) (Item, error) {
 }
 
 // Adds an item to a user's list and returns the item with all its info
-func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
+func (wc *WishClient) AddItemOfUser(item Item, user User) (Item, error) {
 
 	// Check price is within limits
 	intPrice := uint32(item.Price * 100)
@@ -103,12 +116,23 @@ func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
 		})
 	}
 
-	err := ctx.sendObjectToServer("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list", "POST", obj, true)
+	// Set status to available if not provided
+	if obj.Status.StatusID == 0 {
+		obj.Status.StatusID = 1
+	}
+
+	// Marshal object
+	reqBody, err := json.Marshal(obj)
 	if err != nil {
 		return Item{}, err
 	}
 
-	items, err := ctx.GetAllItems(ctx.authUser)
+	_, err = wc.executeRequest("POST", fmt.Sprint("/user/", strconv.FormatUint(user.ID, 10), "/list"), nil, reqBody, true)
+	if err != nil {
+		return Item{}, err
+	}
+
+	items, err := wc.GetAllItemsOfUser(user)
 	if err != nil {
 		return Item{}, err
 	} else if len(items) < 1 {
@@ -125,29 +149,39 @@ func (ctx *Context) AddItemToAuthenticatedUserList(item Item) (Item, error) {
 }
 
 // Delete an item from the database (WARNING! PERMANENT!)
-func (ctx *Context) DeleteItem(item Item) error {
-	return ctx.simpleRequest("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list/"+strconv.FormatUint(item.ItemID, 10), "DELETE", true)
+func (wc *WishClient) DeleteItemOfUser(item Item, user User) error {
+	_, err := wc.executeRequest("DELETE", fmt.Sprint("/user/", strconv.FormatUint(user.ID, 10), "/list/", strconv.FormatUint(item.ItemID, 10)), nil, nil, true)
+	return err
 }
 
 // Sets the status of the provided item
-func (ctx *Context) SetItemStatus(item Item, status Status) error {
+func (wc *WishClient) SetItemStatusOfUser(item Item, user User, status Status) error {
 	obj := struct {
 		Status `json:"status"`
 	}{
 		Status: status,
 	}
 
-	return ctx.sendObjectToServer("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list/"+strconv.FormatUint(item.ItemID, 10), "PUT", obj, true)
+	// Marshal object
+	reqBody, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+
+	_, err = wc.executeRequest("PUT", fmt.Sprint("/user/", strconv.FormatUint(user.ID, 10), "/list/", strconv.FormatUint(item.ItemID, 10)), nil, reqBody, true)
+	return err
 }
 
 // Reserves an item using the reserve endpoint
-func (ctx *Context) ReserveItem(item Item) error {
-	return ctx.simpleRequest("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list/"+strconv.FormatUint(item.ItemID, 10)+"/reserve", "PUT", true)
+func (wc *WishClient) ReserveItemOfUser(item Item, user User) error {
+	_, err := wc.executeRequest("PUT", fmt.Sprint("/user/", strconv.FormatUint(user.ID, 10), "/list/", strconv.FormatUint(item.ItemID, 10), "/reserve"), nil, nil, true)
+	return err
 }
 
 // Reserves an item using the reserve endpoint
-func (ctx *Context) UnreserveItem(item Item) error {
-	return ctx.simpleRequest("/user/"+strconv.FormatUint(ctx.authUser.ID, 10)+"/list/"+strconv.FormatUint(item.ItemID, 10)+"/unreserve", "PUT", true)
+func (wc *WishClient) UnreserveItemOfUser(item Item, user User) error {
+	_, err := wc.executeRequest("PUT", fmt.Sprint("/user/", strconv.FormatUint(user.ID, 10), "/list/", strconv.FormatUint(item.ItemID, 10), "/unreserve"), nil, nil, true)
+	return err
 }
 
 // Converts the item to a short string for debugging (Doesn't contain all info)

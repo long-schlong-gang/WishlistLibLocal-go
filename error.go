@@ -50,12 +50,6 @@ func (e NoPasswordProvidedError) Error() string {
 	return "You can't create an account without any password.\n"
 }
 
-type NoAuthenticatedUserError int
-
-func (e NoAuthenticatedUserError) Error() string {
-	return "This method requires a user to be authenticated with context.SetAuthenticatedUser(user).\n"
-}
-
 type UnknownHttpError string
 
 func (e UnknownHttpError) Error() string {
@@ -72,4 +66,10 @@ type PriceOutOfRangeError uint64
 
 func (e PriceOutOfRangeError) Error() string {
 	return fmt.Sprintf("The price provided was larger than a 32-bit integer. I doubt anyone's going to buy that for you, buddy...: %v\n", uint64(e))
+}
+
+type InvalidTokenError string
+
+func (e InvalidTokenError) Error() string {
+	return fmt.Sprintf("Invalid Token format received from the API: %s\n", string(e))
 }
