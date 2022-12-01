@@ -1,0 +1,43 @@
+{
+    "new_user_id": 1000,
+    "users":{
+        "1": {
+            "name":"Josefi Krakowski",
+            "email":"josefik@example.com",
+            "phash":"m870v3a4mu04vtmu4vtn84vt2",
+            "list":[3124159]
+        }
+    },
+    "new_item_id": 1000,
+    "items":{
+        "1": {
+            "name": "Flex Seal",
+            "description": "The super-strong sealant that bla bla something something",
+            "price": 4799,
+            "reserved_by": -1,
+            "status": 1,
+            "links": [1]
+        }
+    },
+    "new_link_id": 1000,
+    "links": {
+        "1": {
+            "text": "This is a link",
+            "hyperlink": "https://www.google.com"
+        }
+    },
+    "statuses": {
+        "1": {
+            "name": "Available",
+            "description": "This item is available to be reserved"
+        },
+        "2": {
+            "name": "Reserved",
+            "description": "This item has been reserved"
+        },
+        "3": {
+            "name": "Received",
+            "description": "This item has been received already"
+        }
+    }
+}

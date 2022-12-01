@@ -1,9 +1,11 @@
 package wishlistlib
 
 import (
-	"encoding/json"
 	"fmt"
-	"strconv"
+	"regexp"
+	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -15,32 +17,30 @@ type User struct {
 // Retrieves all the users in the database
 func (wc *WishClient) GetAllUsers() ([]User, error) {
 	users := []User{}
-	resBody, err := wc.executeRequest("GET", "/user", nil, nil, false)
-	if err != nil {
-		return nil, err
+	for id, ju := range wc.Users {
+		users = append(users, User{
+			ID:    id,
+			Name:  ju.Name,
+			Email: ju.Email,
+		})
 	}
-
-	err = json.Unmarshal(resBody, &users)
-	if err != nil {
-		return nil, err
-	}
-
 	return users, nil
 }
 
 // Searches users based on a given search string
 func (wc *WishClient) SearchUsers(query string) ([]User, error) {
 	users := []User{}
-	resBody, err := wc.executeRequest("GET", "/user/search", map[string]string{
-		"search": query,
-	}, nil, false)
-	if err != nil {
-		return nil, err
-	}
 
-	err = json.Unmarshal(resBody, &users)
-	if err != nil {
-		return nil, err
+	// Filter by Name or Email
+	filter := regexp.MustCompile(fmt.Sprintf("(?i)%s", query))
+	for id, ju := range wc.Users {
+		if filter.Match([]byte(ju.Name)) || filter.Match([]byte(ju.Email)) {
+			users = append(users, User{
+				ID:    id,
+				Name:  ju.Name,
+				Email: ju.Email,
+			})
+		}
 	}
 
 	return users, nil
@@ -48,60 +48,49 @@ func (wc *WishClient) SearchUsers(query string) ([]User, error) {
 
 // Retrieves a user by their email, returns the user from the server with its assigned ID
 func (wc *WishClient) GetUserByEmail(email string) (User, error) {
-	user := User{}
-	resBody, err := wc.executeRequest("GET", "/user/email", map[string]string{
-		"email": email,
-	}, nil, false)
-	if err != nil {
-		return User{}, err
+	var user *User
+	for id, ju := range wc.Users {
+		if strings.EqualFold(ju.Email, email) {
+			user = &User{
+				ID:    id,
+				Name:  ju.Name,
+				Email: ju.Email,
+			}
+		}
+	}
+	if user == nil {
+		return User{}, NotFoundError(fmt.Sprintf("User with email '%s' not found", email))
 	}
 
-	err = json.Unmarshal(resBody, &user)
-	if err != nil {
-		return User{}, err
-	}
-
-	return user, nil
+	return *user, nil
 }
 
 // Retrieves a user by their email, returns the user from the server with its assigned ID
 func (wc *WishClient) GetUserByID(id uint64) (User, error) {
-	user := User{}
-	resBody, err := wc.executeRequest("GET", "/user/"+strconv.FormatUint(id, 10), nil, nil, false)
-	if err != nil {
-		return User{}, err
+	ju, exists := wc.Users[id]
+	if !exists {
+		return User{}, NotFoundError(fmt.Sprintf("User with ID '%d' not found", id))
 	}
-
-	err = json.Unmarshal(resBody, &user)
-	if err != nil {
-		return User{}, err
-	}
-
-	return user, nil
+	return User{
+		ID:    id,
+		Name:  ju.Name,
+		Email: ju.Email,
+	}, nil
 }
 
 // Adds the given user to the server and returns the user with its new ID
 func (wc *WishClient) AddNewUser(user User, password string) (User, error) {
 
-	// Marshal user object
-	userReq := struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}{
-		Name:     user.Name,
-		Email:    user.Email,
-		Password: password,
-	}
-	reqBody, err := json.Marshal(userReq)
-	if err != nil {
-		return User{}, err
+	// Check user doesn't already exist
+	if _, err := wc.GetUserByEmail(user.Email); err == nil {
+		return User{}, EmailExistsError(fmt.Sprintf("User with email '%s' already exists", user.Email))
 	}
 
-	_, err = wc.executeRequest("POST", "/user", nil, reqBody, false)
-	if err != nil {
-		return User{}, err
+	wc.Users[wc.NextUserID] = JSONUser{
+		Name:  user.Name,
+		Email: user.Email,
 	}
+	wc.NextUserID++
 
 	newUser, err := wc.GetUserByEmail(user.Email)
 	if err != nil {
@@ -112,41 +101,54 @@ func (wc *WishClient) AddNewUser(user User, password string) (User, error) {
 
 // Alters a user based on the provided arguments (leave argument string empty to leave unchanged) Returns the user with changed fields
 func (wc *WishClient) ChangeUser(user User, name, email, password string) error {
-	userInfo := make(map[string]string)
+
+	// Check user exists
+	ju, exists := wc.Users[user.ID]
+	if !exists {
+		return NotFoundError(fmt.Sprintf("User with ID '%d' not found", user.ID))
+	}
 
 	if name != "" {
-		userInfo["name"] = name
+		ju.Name = name
 	}
 
 	if email != "" {
-		userInfo["email"] = email
+		ju.Email = email
 	}
 
 	if password != "" {
-		userInfo["password"] = password
+		hash, err := hashPassword(password)
+		if err != nil {
+			return err
+		}
+		ju.PasswordHash = hash
 	}
 
-	// Marshal user data
-	reqBody, err := json.Marshal(userInfo)
-	if err != nil {
-		return err
-	}
-
-	_, err = wc.executeRequest("PUT", fmt.Sprint("/user/", strconv.FormatUint(user.ID, 10)), nil, reqBody, true)
-	if err != nil {
-		return err
-	}
-
+	wc.Users[user.ID] = ju
 	return nil
 }
 
 // Deletes the given user from the database (WARNING: PERMANENT)
 func (wc *WishClient) DeleteUser(user User) error {
-	_, err := wc.executeRequest("DELETE", fmt.Sprint("/user/", strconv.FormatUint(user.ID, 10)), nil, nil, true)
-	return err
+	if _, exists := wc.Users[user.ID]; !exists {
+		return NotFoundError(fmt.Sprintf("User with ID '%d' not found", user.ID))
+	}
+
+	delete(wc.Users, user.ID)
+	return nil
 }
 
 // Converts the user to a string for debugging
 func (u *User) String() string {
 	return fmt.Sprintf("[%03d] %20s (%s)", u.ID, u.Name, u.Email)
+}
+
+// Util func to hash user passwords
+func hashPassword(password string) (string, error) {
+	pw := []byte(password)
+	result, err := bcrypt.GenerateFromPassword(pw, bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(result), nil
 }

@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	API_BASE_URL = "https://www.pearcenet.ch"
+	DATA_FILE = "testdata.json"
 
 	TEST_USER_NAME  = "Jim Test"
 	TEST_USER_EMAIL = "jim.test@example.com"
@@ -23,7 +23,8 @@ func TestCRUD(t *testing.T) {
 	var item Item
 	var items []Item
 
-	wc := DefaultWishClient(API_BASE_URL)
+	wc, err := DefaultWishClient(DATA_FILE)
+	t.Log("  Error:", err)
 
 	t.Log("Getting all users...")
 	users, err = wc.GetAllUsers()
@@ -100,6 +101,8 @@ func TestCRUD(t *testing.T) {
 	users, _ = wc.GetAllUsers()
 	logUserList(t, users)
 
+	err = wc.Close()
+	t.Log("  Error:", err)
 }
 
 // util funcs
