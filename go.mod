@@ -1,4 +1,4 @@
-module github.com/Sam36502/WishlistLib-go
+module github.com/long-schlong-gang/WishlistLibLocal-go
 
 go 1.17
 
