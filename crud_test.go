@@ -41,6 +41,7 @@ func TestCRUD(t *testing.T) {
 	t.Log("Getting new guy by email...")
 	user, err = wc.GetUserByEmail(TEST_USER_EMAIL)
 	t.Log("  Error:", err)
+	t.Logf("Gotten Guy: %v\n", user)
 
 	t.Log("Authenticating...")
 	err = wc.Authenticate(user.Email, TEST_USER_PASS)

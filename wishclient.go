@@ -14,7 +14,7 @@ type WishClient struct {
 	Links      map[uint64]JSONLink   `json:"links"`
 	NextLinkID uint64                `json:"new_link_id"`
 	Statuses   map[uint64]JSONStatus `json:"statuses"`
-	Token      Token
+	token      Token
 }
 
 type JSONUser struct {

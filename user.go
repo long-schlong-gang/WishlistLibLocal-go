@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -80,15 +78,20 @@ func (wc *WishClient) GetUserByID(id uint64) (User, error) {
 
 // Adds the given user to the server and returns the user with its new ID
 func (wc *WishClient) AddNewUser(user User, password string) (User, error) {
+	password, err := hashPassword(password)
 
 	// Check user doesn't already exist
 	if _, err := wc.GetUserByEmail(user.Email); err == nil {
 		return User{}, EmailExistsError(fmt.Sprintf("User with email '%s' already exists", user.Email))
 	}
 
+	if err != nil {
+		return User{}, err
+	}
 	wc.Users[wc.NextUserID] = JSONUser{
-		Name:  user.Name,
-		Email: user.Email,
+		Name:         user.Name,
+		Email:        user.Email,
+		PasswordHash: password,
 	}
 	wc.NextUserID++
 
@@ -140,15 +143,5 @@ func (wc *WishClient) DeleteUser(user User) error {
 
 // Converts the user to a string for debugging
 func (u *User) String() string {
-	return fmt.Sprintf("[%03d] %20s (%s)", u.ID, u.Name, u.Email)
-}
-
-// Util func to hash user passwords
-func hashPassword(password string) (string, error) {
-	pw := []byte(password)
-	result, err := bcrypt.GenerateFromPassword(pw, bcrypt.DefaultCost)
-	if err != nil {
-		return "", err
-	}
-	return string(result), nil
+	return fmt.Sprintf("[%05d] %20s (%s)", u.ID, u.Name, u.Email)
 }

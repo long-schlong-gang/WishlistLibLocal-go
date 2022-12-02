@@ -35,9 +35,10 @@ func (wc *WishClient) GetAllItemsOfUser(user User) ([]Item, error) {
 
 	items := []Item{}
 	for _, iid := range wc.Users[user.ID].List {
-		if item, err := wc.GetItemByID(iid); err != nil {
+		if item, err := wc.GetItemByID(iid); err == nil {
 			items = append(items, item)
 		}
+		fmt.Println()
 	}
 
 	return items, nil
@@ -193,5 +194,5 @@ func (wc *WishClient) UnreserveItemOfUser(item Item, user User) error {
 
 // Converts the item to a short string for debugging (Doesn't contain all info)
 func (i Item) String() string {
-	return fmt.Sprintf("[%v](%v) %v - CHF %v", i.ItemID, i.Status.Name, i.Name, i.Price)
+	return fmt.Sprintf("[%05d](%v) %v - CHF %v", i.ItemID, i.Status.Name, i.Name, i.Price)
 }

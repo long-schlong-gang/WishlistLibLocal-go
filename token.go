@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -29,17 +30,12 @@ type AuthReq struct {
 
 // Gets an access token from the server to be provided for all secured endpoints.
 func (wc *WishClient) Authenticate(email, password string) error {
-	password, err := hashPassword(password)
-	if err != nil {
-		return err
-	}
-
 	// Authenticate
 	u, err := wc.GetUserByEmail(email)
 	if err != nil {
-		return err
+		return NotAuthenticatedError("Invalid email/password provided")
 	}
-	if wc.Users[u.ID].PasswordHash != password {
+	if comparePassword(wc.Users[u.ID].PasswordHash, password) != nil {
 		return NotAuthenticatedError("Invalid email/password provided")
 	}
 
@@ -50,12 +46,16 @@ func (wc *WishClient) Authenticate(email, password string) error {
 	if err != nil {
 		return err
 	}
-	wc.Token = Token{
+	wc.token = Token{
 		Token:     signd,
 		ExpiresAt: time.Unix(expiry, 0).Local().String(),
 	}
 
 	return nil
+}
+
+func (wc *WishClient) GetToken() Token {
+	return wc.token
 }
 
 // Generates a JWT with the user's email and expiry time
@@ -67,4 +67,20 @@ func generateToken(email string, expiresAt int64) *jwt.Token {
 		Email: email,
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, cl)
+}
+
+func hashPassword(password string) (string, error) {
+	pw := []byte(password)
+	result, err := bcrypt.GenerateFromPassword(pw, bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(result), nil
+}
+
+func comparePassword(hashPassword string, password string) error {
+	pw := []byte(password)
+	hw := []byte(hashPassword)
+	err := bcrypt.CompareHashAndPassword(hw, pw)
+	return err
 }
