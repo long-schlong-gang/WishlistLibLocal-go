@@ -58,6 +58,10 @@ func (wc *WishClient) GetToken() Token {
 	return wc.token
 }
 
+func (wc *WishClient) SetToken(t Token) {
+	wc.token = t
+}
+
 // Generates a JWT with the user's email and expiry time
 func generateToken(email string, expiresAt int64) *jwt.Token {
 	cl := TokenClaims{
