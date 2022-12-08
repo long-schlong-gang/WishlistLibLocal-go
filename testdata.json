@@ -9,7 +9,7 @@
             ]
         }
     },
-    "new_user_id": 1024,
+    "new_user_id": 1026,
     "items": {
         "1": {
             "name": "Flex Seal",
@@ -22,14 +22,18 @@
             ]
         }
     },
-    "new_item_id": 1024,
+    "new_item_id": 1026,
     "links": {
         "1": {
             "text": "This is a link",
             "hyperlink": "https://www.google.com"
+        },
+        "1000": {
+            "text": "A different link",
+            "hyperlink": "https://www.nasa.gov/"
         }
     },
-    "new_link_id": 1000,
+    "new_link_id": 1001,
     "statuses": {
         "1": {
             "name": "Available",

@@ -57,6 +57,12 @@ func TestCRUD(t *testing.T) {
 		Name:        TEST_ITEM_NAME,
 		Description: TEST_ITEM_DESC,
 		Price:       TEST_ITEM_PRICE,
+		Links: []Link{
+			{
+				Text: "A different link",
+				URL:  "https://www.nasa.gov/",
+			},
+		},
 	}, user)
 	t.Log("  Error:", err)
 	t.Log("Last Added Item:", item)

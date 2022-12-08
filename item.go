@@ -122,6 +122,11 @@ func (wc *WishClient) AddItemOfUser(item Item, user User) (Item, error) {
 
 	links := []uint64{}
 	for _, link := range item.Links {
+		wc.Links[wc.NextLinkID] = JSONLink{
+			Text: link.Text,
+			URL:  link.URL,
+		}
+		wc.NextLinkID++
 		links = append(links, link.LinkID)
 	}
 
